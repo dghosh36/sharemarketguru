@@ -91,9 +91,15 @@
   .hero-bg {
     position: absolute;
     inset: 0;
-    background:
-      radial-gradient(ellipse 60% 60% at 70% 50%, rgba(201,168,76,0.06) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 40% at 20% 80%, rgba(29,185,84,0.04) 0%, transparent 60%);
+    overflow: hidden;
+  }
+
+  #candleCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.18;
   }
 
   /* Animated chart lines in background */
@@ -1321,7 +1327,9 @@
 
 <!-- HERO -->
 <section class="hero" style="padding-top: 160px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;">
-  <div class="hero-bg"></div>
+  <div class="hero-bg">
+    <canvas id="candleCanvas"></canvas>
+  </div>
 
   <div class="hero-content" style="position:relative; z-index:2;">
     <div class="hero-tag">Stock Market Educator</div>
@@ -1730,7 +1738,128 @@
 </footer>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+  // Animated candlestick chart background
+  (function() {
+    var canvas = document.getElementById('candleCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+
+    var candles = [];
+    var numCandles = 40;
+    var candleW, gap, totalW;
+    var scrollX = 0;
+    var speed = 0.4;
+
+    function randomCandle(x) {
+      var open = 80 + Math.random() * 340;
+      var close = open + (Math.random() - 0.48) * 120;
+      var high = Math.max(open, close) + Math.random() * 40;
+      var low = Math.min(open, close) - Math.random() * 40;
+      return { x: x, open: open, close: close, high: high, low: low };
+    }
+
+    function init() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      candleW = Math.floor(canvas.width / numCandles * 0.55);
+      gap = Math.floor(canvas.width / numCandles);
+      totalW = numCandles * gap;
+      candles = [];
+      for (var i = 0; i < numCandles + 4; i++) {
+        candles.push(randomCandle(i * gap));
+      }
+    }
+
+    function draw() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(201,168,76,0.08)';
+      ctx.lineWidth = 1;
+      for (var g = 0; g < 6; g++) {
+        var y = (canvas.height / 6) * g;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // Moving average line
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(201,168,76,0.35)';
+      ctx.lineWidth = 1.5;
+      var first = true;
+      candles.forEach(function(c) {
+        var px = c.x - scrollX + canvas.width * 0.1;
+        var mid = canvas.height - ((c.open + c.close) / 2 / 500) * canvas.height * 0.85 - 20;
+        if (first) { ctx.moveTo(px, mid); first = false; }
+        else ctx.lineTo(px, mid);
+      });
+      ctx.stroke();
+
+      // Candles
+      candles.forEach(function(c) {
+        var px = c.x - scrollX + canvas.width * 0.1;
+        if (px < -gap || px > canvas.width + gap) return;
+
+        var bull = c.close >= c.open;
+        var color = bull ? '#1db954' : '#e85555';
+
+        var yOpen  = canvas.height - (c.open  / 500) * canvas.height * 0.85 - 20;
+        var yClose = canvas.height - (c.close / 500) * canvas.height * 0.85 - 20;
+        var yHigh  = canvas.height - (c.high  / 500) * canvas.height * 0.85 - 20;
+        var yLow   = canvas.height - (c.low   / 500) * canvas.height * 0.85 - 20;
+
+        // Wick
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px + candleW / 2, yHigh);
+        ctx.lineTo(px + candleW / 2, yLow);
+        ctx.stroke();
+
+        // Body
+        ctx.fillStyle = color;
+        var bodyTop = Math.min(yOpen, yClose);
+        var bodyH = Math.max(Math.abs(yClose - yOpen), 2);
+        ctx.fillRect(px, bodyTop, candleW, bodyH);
+      });
+
+      // Radial glow overlays
+      var g1 = ctx.createRadialGradient(canvas.width * 0.7, canvas.height * 0.5, 0, canvas.width * 0.7, canvas.height * 0.5, canvas.width * 0.5);
+      g1.addColorStop(0, 'rgba(201,168,76,0.07)');
+      g1.addColorStop(1, 'transparent');
+      ctx.fillStyle = g1;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      var g2 = ctx.createRadialGradient(canvas.width * 0.15, canvas.height * 0.8, 0, canvas.width * 0.15, canvas.height * 0.8, canvas.width * 0.35);
+      g2.addColorStop(0, 'rgba(29,185,84,0.05)');
+      g2.addColorStop(1, 'transparent');
+      ctx.fillStyle = g2;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function animate() {
+      scrollX += speed;
+      // Recycle candles that scroll off left
+      candles.forEach(function(c, i) {
+        if (c.x - scrollX + canvas.width * 0.1 < -gap * 2) {
+          var maxX = Math.max.apply(null, candles.map(function(cc){ return cc.x; }));
+          candles[i] = randomCandle(maxX + gap);
+        }
+      });
+      draw();
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('load', function() {
+      init();
+      animate();
+    });
+    window.addEventListener('resize', init);
+  })();
     function updateFormLock() {
       var c1 = document.getElementById('check1');
       var c2 = document.getElementById('check2');
