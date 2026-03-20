@@ -1326,7 +1326,7 @@
 
 
 <!-- HERO -->
-<section class="hero" style="padding-top: 160px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;">
+<section class="hero" style="padding-top: 160px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; min-height: 100vh; position: relative;">
   <div class="hero-bg">
     <canvas id="candleCanvas"></canvas>
   </div>
@@ -1746,7 +1746,7 @@
 
     var candles = [];
     var numCandles = 40;
-    var candleW, gap, totalW;
+    var candleW, gap;
     var scrollX = 0;
     var speed = 0.4;
 
@@ -1759,11 +1759,11 @@
     }
 
     function init() {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      var parent = canvas.parentElement;
+      canvas.width = parent.offsetWidth || window.innerWidth;
+      canvas.height = parent.offsetHeight || window.innerHeight;
       candleW = Math.floor(canvas.width / numCandles * 0.55);
       gap = Math.floor(canvas.width / numCandles);
-      totalW = numCandles * gap;
       candles = [];
       for (var i = 0; i < numCandles + 4; i++) {
         candles.push(randomCandle(i * gap));
@@ -1771,8 +1771,9 @@
     }
 
     function draw() {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      var parent = canvas.parentElement;
+      canvas.width = parent.offsetWidth || window.innerWidth;
+      canvas.height = parent.offsetHeight || window.innerHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Grid lines
@@ -1802,39 +1803,33 @@
       // Candles
       candles.forEach(function(c) {
         var px = c.x - scrollX + canvas.width * 0.1;
-        if (px < -gap || px > canvas.width + gap) return;
-
+        if (px < -gap * 2 || px > canvas.width + gap) return;
         var bull = c.close >= c.open;
         var color = bull ? '#1db954' : '#e85555';
-
         var yOpen  = canvas.height - (c.open  / 500) * canvas.height * 0.85 - 20;
         var yClose = canvas.height - (c.close / 500) * canvas.height * 0.85 - 20;
         var yHigh  = canvas.height - (c.high  / 500) * canvas.height * 0.85 - 20;
         var yLow   = canvas.height - (c.low   / 500) * canvas.height * 0.85 - 20;
-
-        // Wick
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(px + candleW / 2, yHigh);
         ctx.lineTo(px + candleW / 2, yLow);
         ctx.stroke();
-
-        // Body
         ctx.fillStyle = color;
         var bodyTop = Math.min(yOpen, yClose);
         var bodyH = Math.max(Math.abs(yClose - yOpen), 2);
         ctx.fillRect(px, bodyTop, candleW, bodyH);
       });
 
-      // Radial glow overlays
-      var g1 = ctx.createRadialGradient(canvas.width * 0.7, canvas.height * 0.5, 0, canvas.width * 0.7, canvas.height * 0.5, canvas.width * 0.5);
+      // Glow overlays
+      var g1 = ctx.createRadialGradient(canvas.width*0.7, canvas.height*0.5, 0, canvas.width*0.7, canvas.height*0.5, canvas.width*0.5);
       g1.addColorStop(0, 'rgba(201,168,76,0.07)');
       g1.addColorStop(1, 'transparent');
       ctx.fillStyle = g1;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      var g2 = ctx.createRadialGradient(canvas.width * 0.15, canvas.height * 0.8, 0, canvas.width * 0.15, canvas.height * 0.8, canvas.width * 0.35);
+      var g2 = ctx.createRadialGradient(canvas.width*0.15, canvas.height*0.8, 0, canvas.width*0.15, canvas.height*0.8, canvas.width*0.35);
       g2.addColorStop(0, 'rgba(29,185,84,0.05)');
       g2.addColorStop(1, 'transparent');
       ctx.fillStyle = g2;
@@ -1843,7 +1838,6 @@
 
     function animate() {
       scrollX += speed;
-      // Recycle candles that scroll off left
       candles.forEach(function(c, i) {
         if (c.x - scrollX + canvas.width * 0.1 < -gap * 2) {
           var maxX = Math.max.apply(null, candles.map(function(cc){ return cc.x; }));
@@ -1854,11 +1848,15 @@
       requestAnimationFrame(animate);
     }
 
-    window.addEventListener('load', function() {
+    // Use setTimeout to ensure layout is complete
+    setTimeout(function() {
       init();
       animate();
+    }, 100);
+
+    window.addEventListener('resize', function() {
+      init();
     });
-    window.addEventListener('resize', init);
   })();
     function updateFormLock() {
       var c1 = document.getElementById('check1');
