@@ -1807,27 +1807,12 @@
             </div>
           </div>
           <div class="batch-status">
-            <div class="batch-dot" id="batch-dot"></div>
+            <div class="batch-dot" style="background:#e85555;box-shadow:0 0 8px #e85555;"></div>
             <div>
-              <div class="batch-label" id="batch-label">Next Batch Status</div>
-              <div class="batch-value" id="batch-value">Loading...</div>
+              <div class="batch-label">Batch Status</div>
+              <div class="batch-value">Fully booked for the next 3 months. Check back later.</div>
             </div>
           </div>
-          <script>
-          (function() {
-            var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-            var now = new Date();
-            var thisMonth = months[now.getMonth()];
-            var nextMonth = months[(now.getMonth() + 1) % 12];
-            var dot   = document.getElementById('batch-dot');
-            var label = document.getElementById('batch-label');
-            var value = document.getElementById('batch-value');
-            label.textContent = thisMonth + ' Batch Status';
-            value.textContent = thisMonth + ' bookings are full.';
-            dot.style.background = '#e85555';
-            dot.style.boxShadow  = '0 0 8px #e85555';
-          })();
-          </script>
           <div class="premium-note">🔒 Enrollment only open to students who have passed the Eligibility Assessment. No exceptions.</div>
         </div>
       </div>
